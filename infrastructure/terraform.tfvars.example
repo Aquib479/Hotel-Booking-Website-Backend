@@ -1,0 +1,10 @@
+aws_region              = "ap-southeast-1"
+env                     = "dev"
+name_prefix             = "resthalfv2-dev"
+db_name                 = "resthalf"
+db_instance_class       = "db.t4g.micro"
+ec2_instance_type       = "t4g.small"
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO+SoXZyErx7lGTm3JWsYzjgomt5JfsqM8PlEdRmPvlX resthalfv2"
+allowed_ssh_cidrs       = ["115.96.179.142/32"]
+allowed_db_cidrs        = ["115.96.179.142/32"]
+rds_publicly_accessible = true

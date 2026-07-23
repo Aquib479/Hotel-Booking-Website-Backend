@@ -1,0 +1,50 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            APP_DIR=~/RestHalfV2/apps/api
+
+            # Create a temp dir for new source
+            TEMP_DIR=$(mktemp -d)
+            cd $TEMP_DIR
+
+            # Clone only the src directory from the repo
+            git clone --depth 1 https://github.com/${{ github.repository }}.git repo
+            
+            # Copy source files
+            cp -r repo/apps/api/src $APP_DIR/src
+            cp repo/apps/api/package.json $APP_DIR/package.json
+            cp repo/apps/api/package-lock.json $APP_DIR/package-lock.json 2>/dev/null || true
+            cp repo/apps/api/tsconfig.json $APP_DIR/tsconfig.json
+            cp repo/apps/api/tsconfig.build.json $APP_DIR/tsconfig.build.json
+            cp repo/apps/api/nest-cli.json $APP_DIR/nest-cli.json
+
+            # Cleanup temp
+            rm -rf $TEMP_DIR
+
+            # Install deps, build, restart
+            cd $APP_DIR
+            npm install --production=false
+            npm run build
+            pm2 restart resthalfv2-api
+
+            echo "✅ Backend deployed successfully"
