@@ -1,0 +1,561 @@
+openapi: 3.0.3
+info:
+  title: RestHalf Bedbank BFF
+  description: |
+    Thin BFF over wholesale bedbank suppliers (default: MG Jarvis).
+    Request bodies are forwarded as-is. Login credentials are injected
+    server-side — do not send a Login object.
+
+    Booking flow: search → recheck → book → reservation details / cancel.
+    SessionID from search is valid for ~20 minutes.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001
+    description: Local
+  - url: https://api.resthalf.com
+    description: Production
+
+tags:
+  - name: Bedbank
+    description: Wholesale hotel inventory proxy
+
+paths:
+  /bedbank/search:
+    post:
+      tags: [Bedbank]
+      summary: Search hotels
+      description: Proxies MG SearchHotel. Returns sessionID for recheck/book.
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchHotelRequest'
+            example:
+              Nationality: ID
+              Country: ID
+              City: ID-CGK
+              Hotels:
+                Code: [ID10000117]
+              CheckIn: '2026-10-06'
+              CheckOut: '2026-10-09'
+              Rooms:
+                Room:
+                  - RoomNo: '1'
+                    NoOfAdults: '1'
+                    NoOfChild: ''
+                    Child1Age: ''
+                    Child2Age: ''
+                    ExtraBed: false
+              Currency: IDR
+              Language: En
+              AvailFlag: true
+              DetailLevel: FULL
+      responses:
+        '200':
+          description: Supplier search response (pass-through)
+        '502':
+          description: Supplier error or unreachable
+
+  /bedbank/recheck:
+    post:
+      tags: [Bedbank]
+      summary: Recheck rate before booking
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecheckHotelRequest'
+            example:
+              SessionID: 6ADE7581-A98C-4805-BECE-9638460C931D
+              Nationality: ID
+              Country: ID
+              City: ID-CGK
+              CheckIn: '2026-10-06'
+              CheckOut: '2026-10-09'
+              HotelCode: ID10000117
+              RoomDetails:
+                Code: RM_214_0
+                MealPlan: BDBF
+                CancellationPolicyType: Flexi
+                PackageRate: false
+              Rooms:
+                Room:
+                  - RoomNo: '1'
+                    NoOfAdults: '1'
+                    NoOfChild: ''
+                    Child1Age: ''
+                    Child2Age: ''
+                    ExtraBed: false
+                    RateKey: 92db80ea-9c99-424c-aa18-762c25e806f0
+              Currency: IDR
+              Language: EN
+              AvailFlag: true
+              DetailLevel: FULL
+      responses:
+        '200':
+          description: Supplier recheck response (pass-through)
+        '502':
+          description: Supplier error or unreachable
+
+  /bedbank/book:
+    post:
+      tags: [Bedbank]
+      summary: Book hotel
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookHotelRequest'
+            example:
+              SessionID: 6ADE7581-A98C-4805-BECE-9638460C931D
+              AgencyBookingID: RH260823011813
+              Nationality: ID
+              CheckIn: '2026-10-06'
+              CheckOut: '2026-10-09'
+              HotelCode: ID10000117
+              RoomDetails:
+                Code: RM_214_0
+                MealPlan: BDBF
+                CancellationPolicyType: Flexi
+                PackageRate: false
+              Rooms:
+                Room:
+                  - RoomNo: '1'
+                    RateKey: 92db80ea-9c99-424c-aa18-762c25e806f0
+                    NoOfAdults: '1'
+                    NoOfChild: ''
+                    Child1Age: ''
+                    Child2Age: ''
+                    ExtraBed: false
+                    PaxDetails:
+                      Pax:
+                        - Salutation: Mr
+                          FirstName: John
+                          LastName: Doe
+              SpecialReq: Late check-in requested
+              OnHold: false
+              AvailFlag: true
+              Currency: IDR
+              Language: EN
+              DetailLevel: FULL
+      responses:
+        '200':
+          description: Supplier book response (pass-through)
+        '502':
+          description: Supplier error or unreachable
+
+  /bedbank/reservation/details:
+    post:
+      tags: [Bedbank]
+      summary: Get reservation details
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationDetailsRequest'
+            examples:
+              byMgId:
+                summary: By MG booking ID
+                value:
+                  MGBookingID: AGID0542152608054476
+              byAgencyId:
+                summary: By agency booking ID
+                value:
+                  AgencyBookingID: RH260823011813
+      responses:
+        '200':
+          description: Supplier reservation details (pass-through)
+
+  /bedbank/reservation/list:
+    post:
+      tags: [Bedbank]
+      summary: List reservations
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationListRequest'
+            example:
+              DateType: '1'
+              Date: '2026-08-23'
+              Language: EN
+              DetailLevel: FULL
+      responses:
+        '200':
+          description: Supplier reservation list (pass-through)
+
+  /bedbank/reservation/cancel:
+    post:
+      tags: [Bedbank]
+      summary: Cancel reservation
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelReservationRequest'
+            example:
+              MGBookingID: AGID0542152608054476
+      responses:
+        '200':
+          description: Supplier cancel response (pass-through)
+
+  /bedbank/hotel/detail:
+    post:
+      tags: [Bedbank]
+      summary: Get hotel detail / content
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HotelDetailRequest'
+            example:
+              HotelCode: ID10000117
+      responses:
+        '200':
+          description: Supplier hotel detail (pass-through)
+
+  /bedbank/destinations:
+    get:
+      tags: [Bedbank]
+      summary: Get destinations
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      responses:
+        '200':
+          description: Continents → countries → cities (pass-through)
+
+  /bedbank/nationalities:
+    get:
+      tags: [Bedbank]
+      summary: Get nationalities
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      responses:
+        '200':
+          description: Nationality codes (pass-through)
+
+  /bedbank/meal-plans:
+    get:
+      tags: [Bedbank]
+      summary: Get meal plans
+      parameters:
+        - $ref: '#/components/parameters/SourceQuery'
+      responses:
+        '200':
+          description: Meal plan codes (pass-through)
+
+components:
+  parameters:
+    SourceQuery:
+      name: source
+      in: query
+      required: false
+      schema:
+        type: string
+        default: mg
+        example: mg
+      description: Supplier adapter key
+
+  schemas:
+    SearchRoom:
+      type: object
+      required: [RoomNo, NoOfAdults, ExtraBed]
+      properties:
+        RoomNo:
+          type: string
+          example: '1'
+        NoOfAdults:
+          type: string
+          example: '1'
+        NoOfChild:
+          type: string
+          example: ''
+        Child1Age:
+          type: string
+          example: ''
+        Child2Age:
+          type: string
+          example: ''
+        ExtraBed:
+          type: boolean
+          example: false
+
+    SearchHotelRequest:
+      type: object
+      required:
+        - Nationality
+        - Country
+        - City
+        - Hotels
+        - CheckIn
+        - CheckOut
+        - Rooms
+        - Currency
+        - Language
+        - AvailFlag
+        - DetailLevel
+      properties:
+        Nationality:
+          type: string
+          example: ID
+        Country:
+          type: string
+          example: ID
+        City:
+          type: string
+          example: ID-CGK
+        Hotels:
+          type: object
+          properties:
+            Code:
+              type: array
+              items:
+                type: string
+              description: Hotel codes; use [""] for city-wide search
+        CheckIn:
+          type: string
+          format: date
+        CheckOut:
+          type: string
+          format: date
+        Rooms:
+          type: object
+          properties:
+            Room:
+              type: array
+              items:
+                $ref: '#/components/schemas/SearchRoom'
+        Currency:
+          type: string
+          example: IDR
+        Language:
+          type: string
+          example: En
+        AvailFlag:
+          type: boolean
+        DetailLevel:
+          type: string
+          example: FULL
+        MaxNoOfHotel:
+          type: integer
+          example: 10
+
+    RoomDetails:
+      type: object
+      properties:
+        Code:
+          type: string
+          example: RM_214_0
+        MealPlan:
+          type: string
+          example: BDBF
+        CancellationPolicyType:
+          type: string
+          example: Flexi
+        PackageRate:
+          type: boolean
+          example: false
+
+    RecheckHotelRequest:
+      type: object
+      required:
+        - SessionID
+        - Nationality
+        - Country
+        - City
+        - CheckIn
+        - CheckOut
+        - HotelCode
+        - RoomDetails
+        - Rooms
+        - Currency
+        - Language
+        - AvailFlag
+        - DetailLevel
+      properties:
+        SessionID:
+          type: string
+        Nationality:
+          type: string
+        Country:
+          type: string
+        City:
+          type: string
+        CheckIn:
+          type: string
+          format: date
+        CheckOut:
+          type: string
+          format: date
+        HotelCode:
+          type: string
+        RoomDetails:
+          $ref: '#/components/schemas/RoomDetails'
+        Rooms:
+          type: object
+          properties:
+            Room:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/SearchRoom'
+                  - type: object
+                    properties:
+                      RateKey:
+                        type: string
+        Currency:
+          type: string
+        Language:
+          type: string
+        AvailFlag:
+          type: boolean
+        DetailLevel:
+          type: string
+
+    BookHotelRequest:
+      type: object
+      required:
+        - SessionID
+        - AgencyBookingID
+        - Nationality
+        - CheckIn
+        - CheckOut
+        - HotelCode
+        - RoomDetails
+        - Rooms
+        - OnHold
+        - AvailFlag
+        - Currency
+        - Language
+        - DetailLevel
+      properties:
+        SessionID:
+          type: string
+        AgencyBookingID:
+          type: string
+          maxLength: 15
+          description: Your unique booking reference (max 15 chars)
+        Nationality:
+          type: string
+        CheckIn:
+          type: string
+          format: date
+        CheckOut:
+          type: string
+          format: date
+        HotelCode:
+          type: string
+        RoomDetails:
+          $ref: '#/components/schemas/RoomDetails'
+        Rooms:
+          type: object
+          properties:
+            Room:
+              type: array
+              items:
+                type: object
+                properties:
+                  RoomNo:
+                    type: string
+                  RateKey:
+                    type: string
+                  NoOfAdults:
+                    type: string
+                  NoOfChild:
+                    type: string
+                  Child1Age:
+                    type: string
+                  Child2Age:
+                    type: string
+                  ExtraBed:
+                    type: boolean
+                  PaxDetails:
+                    type: object
+                    properties:
+                      Pax:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            Salutation:
+                              type: string
+                            FirstName:
+                              type: string
+                            LastName:
+                              type: string
+        SpecialReq:
+          type: string
+        OnHold:
+          type: boolean
+        AvailFlag:
+          type: boolean
+        Currency:
+          type: string
+        Language:
+          type: string
+        DetailLevel:
+          type: string
+
+    ReservationDetailsRequest:
+      type: object
+      properties:
+        MGBookingID:
+          type: string
+        AgencyBookingID:
+          type: string
+      description: Provide either MGBookingID or AgencyBookingID
+
+    ReservationListRequest:
+      type: object
+      required: [DateType, Date, Language, DetailLevel]
+      properties:
+        DateType:
+          type: string
+          description: '1 = booking date, 2 = check-in date'
+          example: '1'
+        Date:
+          type: string
+          format: date
+        Language:
+          type: string
+          example: EN
+        DetailLevel:
+          type: string
+          example: FULL
+
+    CancelReservationRequest:
+      type: object
+      required: [MGBookingID]
+      properties:
+        MGBookingID:
+          type: string
+
+    HotelDetailRequest:
+      type: object
+      required: [HotelCode]
+      properties:
+        HotelCode:
+          type: string
+          example: ID10000117
