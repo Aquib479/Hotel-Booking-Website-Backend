@@ -1,15 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-/** Shared query: which supplier adapter to use. */
-export class SourceQueryDto {
-  @ApiPropertyOptional({
-    description: 'Supplier source key',
-    default: 'mg',
-    example: 'mg',
-  })
-  source?: string;
-}
-
 export class SearchRoomDto {
   @ApiProperty({ example: '1' })
   RoomNo: string;

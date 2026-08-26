@@ -25,14 +25,14 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('RestHalf API')
     .setDescription(
-      'RestHalfV2 API including Bedbank BFF (MG Jarvis proxy). ' +
+      'RestHalfV2 API including Bedbank BFF. ' +
         'Bedbank endpoints forward supplier responses as-is. ' +
-        'Login credentials are injected server-side — do not send Login in the body.',
+        'Credentials and supplier selection are server-side — clients do not send Login or a source.',
     )
     .setVersion('1.0')
     .addTag(
       'Bedbank',
-      'Wholesale hotel inventory BFF. Default source=mg. Flow: search → recheck → book → reservation.',
+      'Wholesale hotel inventory. Flow: search → recheck → book → reservation.',
     )
     .build();
 

@@ -2,9 +2,8 @@ openapi: 3.0.3
 info:
   title: RestHalf Bedbank BFF
   description: |
-    Thin BFF over wholesale bedbank suppliers (default: MG Jarvis).
-    Request bodies are forwarded as-is. Login credentials are injected
-    server-side — do not send a Login object.
+    Bedbank BFF for wholesale hotel inventory.
+    Request bodies are forwarded as-is. Credentials are injected server-side — do not send Login. Supplier is chosen server-side.
 
     Booking flow: search → recheck → book → reservation details / cancel.
     SessionID from search is valid for ~20 minutes.
@@ -26,8 +25,6 @@ paths:
       tags: [Bedbank]
       summary: Search hotels
       description: Proxies MG SearchHotel. Returns sessionID for recheck/book.
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -64,8 +61,6 @@ paths:
     post:
       tags: [Bedbank]
       summary: Recheck rate before booking
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -108,8 +103,6 @@ paths:
     post:
       tags: [Bedbank]
       summary: Book hotel
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -158,8 +151,6 @@ paths:
     post:
       tags: [Bedbank]
       summary: Get reservation details
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -183,8 +174,6 @@ paths:
     post:
       tags: [Bedbank]
       summary: List reservations
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -204,8 +193,6 @@ paths:
     post:
       tags: [Bedbank]
       summary: Cancel reservation
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -222,8 +209,6 @@ paths:
     post:
       tags: [Bedbank]
       summary: Get hotel detail / content
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       requestBody:
         required: true
         content:
@@ -240,8 +225,6 @@ paths:
     get:
       tags: [Bedbank]
       summary: Get destinations
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       responses:
         '200':
           description: Continents → countries → cities (pass-through)
@@ -250,8 +233,6 @@ paths:
     get:
       tags: [Bedbank]
       summary: Get nationalities
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       responses:
         '200':
           description: Nationality codes (pass-through)
@@ -260,23 +241,11 @@ paths:
     get:
       tags: [Bedbank]
       summary: Get meal plans
-      parameters:
-        - $ref: '#/components/parameters/SourceQuery'
       responses:
         '200':
           description: Meal plan codes (pass-through)
 
 components:
-  parameters:
-    SourceQuery:
-      name: source
-      in: query
-      required: false
-      schema:
-        type: string
-        default: mg
-        example: mg
-      description: Supplier adapter key
 
   schemas:
     SearchRoom:

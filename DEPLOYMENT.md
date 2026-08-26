@@ -59,6 +59,7 @@ Create `.env` at `~/RestHalfV2/apps/api/.env` on the EC2 instance:
 | `MG_AGENCY_CODE` | For bedbank | — | MG agency code (e.g. `AGID054215`) |
 | `MG_USERNAME` | For bedbank | — | MG API username |
 | `MG_PASSWORD` | For bedbank | — | MG API password |
+| `BEDBANK_DEFAULT_SOURCE` | No | `mg` | Active bedbank supplier key (server-side; not exposed to clients) |
 
 Example `.env`:
 

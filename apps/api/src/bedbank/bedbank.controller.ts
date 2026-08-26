@@ -1,9 +1,8 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import {
   ApiBody,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { SupplierService } from './supplier.service';
@@ -18,9 +17,8 @@ import {
 } from './dto/bedbank.dto';
 
 /**
- * Thin BFF over wholesale bedbank suppliers.
- * Request bodies are forwarded as-is (Login injected server-side).
- * Query `source` selects the adapter (default: mg).
+ * Bedbank BFF. Supplier is chosen server-side — clients never send a source.
+ * Login / credentials injected server-side.
  */
 @ApiTags('Bedbank')
 @Controller('bedbank')
@@ -31,143 +29,108 @@ export class BedbankController {
   @ApiOperation({
     summary: 'Search hotels',
     description:
-      'Proxies MG SearchHotel. Creates a sessionID (valid ~20 min) used by recheck/book. Do not send Login — injected server-side.',
+      'City or hotel-code availability search. Returns a sessionID (valid ~20 min) for recheck/book. Do not send Login.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: SearchHotelDto })
-  @ApiOkResponse({ description: 'Supplier search response (pass-through)' })
-  search(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).searchHotels(body);
+  @ApiOkResponse({ description: 'Search response (pass-through)' })
+  search(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().searchHotels(body);
   }
 
   @Post('recheck')
   @ApiOperation({
     summary: 'Recheck rate before booking',
-    description:
-      'Proxies MG RecheckHotel. Requires SessionID and RateKey from search.',
+    description: 'Requires SessionID and RateKey from search.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: RecheckHotelDto })
-  @ApiOkResponse({ description: 'Supplier recheck response (pass-through)' })
-  recheck(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).recheckHotel(body);
+  @ApiOkResponse({ description: 'Recheck response (pass-through)' })
+  recheck(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().recheckHotel(body);
   }
 
   @Post('book')
   @ApiOperation({
     summary: 'Book hotel',
     description:
-      'Proxies MG BookHotel. AgencyBookingID max 15 chars. Use RateKey from recheck when available.',
+      'AgencyBookingID max 15 chars. Prefer RateKey from the latest recheck.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: BookHotelDto })
-  @ApiOkResponse({ description: 'Supplier book response (pass-through)' })
-  book(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).bookHotel(body);
+  @ApiOkResponse({ description: 'Book response (pass-through)' })
+  book(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().bookHotel(body);
   }
 
   @Post('reservation/details')
   @ApiOperation({
     summary: 'Get reservation details',
-    description:
-      'Proxies MG GetRSVNDetails. Provide either MGBookingID or AgencyBookingID.',
+    description: 'Provide either MGBookingID or AgencyBookingID.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: ReservationDetailsDto })
-  @ApiOkResponse({ description: 'Supplier reservation details (pass-through)' })
-  reservationDetails(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).getReservationDetails(body);
+  @ApiOkResponse({ description: 'Reservation details (pass-through)' })
+  reservationDetails(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().getReservationDetails(body);
   }
 
   @Post('reservation/list')
   @ApiOperation({
     summary: 'List reservations',
-    description:
-      'Proxies MG GetRSVNList. DateType 1 = booking date, 2 = check-in date.',
+    description: 'DateType 1 = booking date, 2 = check-in date.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: ReservationListDto })
-  @ApiOkResponse({ description: 'Supplier reservation list (pass-through)' })
-  reservationList(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).getReservationList(body);
+  @ApiOkResponse({ description: 'Reservation list (pass-through)' })
+  reservationList(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().getReservationList(body);
   }
 
   @Post('reservation/cancel')
   @ApiOperation({
     summary: 'Cancel reservation',
-    description: 'Proxies MG CancelReservation by MGBookingID.',
+    description: 'Cancel by MGBookingID.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: CancelReservationDto })
-  @ApiOkResponse({ description: 'Supplier cancel response (pass-through)' })
-  reservationCancel(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).cancelReservation(body);
+  @ApiOkResponse({ description: 'Cancel response (pass-through)' })
+  reservationCancel(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().cancelReservation(body);
   }
 
   @Post('hotel/detail')
   @ApiOperation({
     summary: 'Get hotel detail / content',
-    description:
-      'Proxies MG GetHotelDetail (photos, facilities, room content).',
+    description: 'Photos, facilities, and room content for a hotel code.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
   @ApiBody({ type: HotelDetailDto })
-  @ApiOkResponse({ description: 'Supplier hotel detail (pass-through)' })
-  hotelDetail(
-    @Body() body: Record<string, unknown>,
-    @Query('source') source?: string,
-  ) {
-    return this.suppliers.resolve(source).getHotelDetail(body);
+  @ApiOkResponse({ description: 'Hotel detail (pass-through)' })
+  hotelDetail(@Body() body: Record<string, unknown>) {
+    return this.suppliers.active().getHotelDetail(body);
   }
 
   @Get('destinations')
   @ApiOperation({
     summary: 'Get destinations',
-    description: 'Proxies MG GetDestinations (continents → countries → cities).',
+    description: 'Continents → countries → cities (city codes for search).',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
-  @ApiOkResponse({ description: 'Supplier destinations (pass-through)' })
-  destinations(@Query('source') source?: string) {
-    return this.suppliers.resolve(source).getDestinations();
+  @ApiOkResponse({ description: 'Destinations (pass-through)' })
+  destinations() {
+    return this.suppliers.active().getDestinations();
   }
 
   @Get('nationalities')
   @ApiOperation({
     summary: 'Get nationalities',
-    description: 'Proxies MG GetNationalities.',
+    description: 'Nationality codes for search/book.',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
-  @ApiOkResponse({ description: 'Supplier nationalities (pass-through)' })
-  nationalities(@Query('source') source?: string) {
-    return this.suppliers.resolve(source).getNationalities();
+  @ApiOkResponse({ description: 'Nationalities (pass-through)' })
+  nationalities() {
+    return this.suppliers.active().getNationalities();
   }
 
   @Get('meal-plans')
   @ApiOperation({
     summary: 'Get meal plans',
-    description: 'Proxies MG GetMealPlans (e.g. RO, BDBF, HB, FB, AI).',
+    description: 'Meal plan codes (e.g. RO, BDBF, HB, FB, AI).',
   })
-  @ApiQuery({ name: 'source', required: false, example: 'mg' })
-  @ApiOkResponse({ description: 'Supplier meal plans (pass-through)' })
-  mealPlans(@Query('source') source?: string) {
-    return this.suppliers.resolve(source).getMealPlans();
+  @ApiOkResponse({ description: 'Meal plans (pass-through)' })
+  mealPlans() {
+    return this.suppliers.active().getMealPlans();
   }
 }
