@@ -42,7 +42,7 @@ export class MgBedbankClient {
   }
 
   async getDestinations(): Promise<any> {
-    return this.post('/1.0/hotel/GetDestinations', {});
+    return this.post('/1.0/hotel/GetDestinations', {}, 120_000);
   }
 
   async getNationalities(): Promise<any> {
@@ -60,6 +60,7 @@ export class MgBedbankClient {
   private async post(
     path: string,
     body: Record<string, unknown>,
+    timeoutMs = 60_000,
   ): Promise<any> {
     if (!this.config.agencyCode || !this.config.username || !this.config.password) {
       throw new ServiceUnavailableException(
@@ -80,7 +81,7 @@ export class MgBedbankClient {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        timeout: 60_000,
+        timeout: timeoutMs,
       });
 
       if (data && data.status === false) {

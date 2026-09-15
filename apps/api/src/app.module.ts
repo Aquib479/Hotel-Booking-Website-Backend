@@ -7,9 +7,13 @@ import { Hotel } from './hotels/hotel.entity';
 import { Room } from './rooms/room.entity';
 import { Guest } from './guests/guest.entity';
 import { Booking } from './booking/booking.entity';
+import { Destination } from './destinations/destination.entity';
+import { DestinationSourceCode } from './destinations/destination-source-code.entity';
+import { Nationality } from './destinations/nationality.entity';
 
 import { AuthModule } from './auth/auth.module';
 import { BedbankModule } from './bedbank/bedbank.module';
+import { DestinationsModule } from './destinations/destinations.module';
 import { SearchService } from './search/search.service';
 import { SearchController } from './search/search.controller';
 import { BookingService } from './booking/booking.service';
@@ -58,17 +62,35 @@ export class AppModule {
         }),
         TypeOrmModule.forRootAsync({
           inject: [ConfigService],
-          useFactory: (cfg: ConfigService) => ({
-            type: 'postgres',
-            url: cfg.get('DATABASE_URL'),
-            entities: [Hotel, Room, Guest, Booking],
-            synchronize: cfg.get('TYPEORM_SYNCHRONIZE') !== 'false',
-            ssl: { rejectUnauthorized: false },
-          }),
+          useFactory: (cfg: ConfigService) => {
+            const url = cfg.get<string>('DATABASE_URL') ?? '';
+            const isLocal =
+              url.includes('localhost') || url.includes('127.0.0.1');
+            const useSsl =
+              cfg.get('DATABASE_SSL') === 'true' ||
+              (!isLocal && url.length > 0);
+
+            return {
+              type: 'postgres',
+              url,
+              entities: [
+                Hotel,
+                Room,
+                Guest,
+                Booking,
+                Destination,
+                DestinationSourceCode,
+                Nationality,
+              ],
+              synchronize: cfg.get('TYPEORM_SYNCHRONIZE') !== 'false',
+              ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+            };
+          },
         }),
         TypeOrmModule.forFeature([Hotel, Room, Guest, Booking]),
         AuthModule,
         BedbankModule,
+        DestinationsModule,
       ],
       controllers: [
         SearchController,

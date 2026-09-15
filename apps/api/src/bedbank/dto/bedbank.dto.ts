@@ -21,14 +21,29 @@ export class SearchRoomDto {
 }
 
 export class SearchHotelDto {
+  @ApiPropertyOptional({
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description:
+      'Local destination id from /destinations/autocomplete. When set, server resolves Country/City for the active supplier.',
+  })
+  destinationId?: string;
+
   @ApiProperty({ example: 'ID', description: 'Guest nationality ISO code' })
   Nationality: string;
 
-  @ApiProperty({ example: 'ID', description: 'Destination country code' })
-  Country: string;
+  @ApiPropertyOptional({
+    example: 'ID',
+    description:
+      'Destination country code. Required when destinationId is omitted; ignored/overwritten when destinationId is set.',
+  })
+  Country?: string;
 
-  @ApiProperty({ example: 'ID-CGK', description: 'City code from GetDestinations' })
-  City: string;
+  @ApiPropertyOptional({
+    example: 'ID-CGK',
+    description:
+      'City code from GetDestinations. Required when destinationId is omitted; ignored/overwritten when destinationId is set.',
+  })
+  City?: string;
 
   @ApiProperty({
     example: { Code: ['ID10000117'] },

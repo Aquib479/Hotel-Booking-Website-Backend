@@ -22,6 +22,11 @@ export class SupplierService {
     return this.resolve(this.defaultSource);
   }
 
+  /** Active supplier key (e.g. mg) for destination code resolution. */
+  activeSource(): string {
+    return this.defaultSource;
+  }
+
   resolve(source: string): SupplierAdapter {
     const adapter = this.adapters.get(source);
     if (!adapter) {

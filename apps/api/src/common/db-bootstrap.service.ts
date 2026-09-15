@@ -14,12 +14,31 @@ export class DbBootstrapService implements OnModuleInit {
   async onModuleInit() {
     await this.ensureExtensions();
     await this.ensureBookingConstraints();
+    await this.ensureDestinationIndexes();
     await this.ensureCronJobs();
   }
 
   private async ensureExtensions() {
     await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
     await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS btree_gist`);
+    try {
+      await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    } catch (err) {
+      this.logger.warn(
+        `pg_trgm unavailable; destination autocomplete will use ILIKE only (${(err as Error).message})`,
+      );
+    }
+  }
+
+  private async ensureDestinationIndexes() {
+    await this.dataSource.query(`
+      CREATE INDEX IF NOT EXISTS idx_destinations_search_text_trgm
+        ON destinations USING GIN (search_text gin_trgm_ops)
+    `).catch((err) => {
+      this.logger.warn(
+        `Could not create destinations trgm index (${(err as Error).message})`,
+      );
+    });
   }
 
   private async ensureBookingConstraints() {

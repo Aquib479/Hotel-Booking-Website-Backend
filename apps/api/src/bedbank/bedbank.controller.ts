@@ -1,10 +1,17 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBody,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { ModuleRef } from '@nestjs/core';
 import { SupplierService } from './supplier.service';
 import {
   BookHotelDto,
@@ -15,6 +22,7 @@ import {
   ReservationListDto,
   SearchHotelDto,
 } from './dto/bedbank.dto';
+import { DestinationsService } from '../destinations/destinations.service';
 
 /**
  * Bedbank BFF. Supplier is chosen server-side — clients never send a source.
@@ -23,18 +31,23 @@ import {
 @ApiTags('Bedbank')
 @Controller('bedbank')
 export class BedbankController {
-  constructor(private readonly suppliers: SupplierService) {}
+  constructor(
+    private readonly suppliers: SupplierService,
+    private readonly moduleRef: ModuleRef,
+  ) {}
 
   @Post('search')
   @ApiOperation({
     summary: 'Search hotels',
     description:
-      'City or hotel-code availability search. Returns a sessionID (valid ~20 min) for recheck/book. Do not send Login.',
+      'City or hotel-code availability search. Returns a sessionID (valid ~20 min) for recheck/book. ' +
+      'Pass destinationId to resolve Country/City from the local destination master. Do not send Login.',
   })
   @ApiBody({ type: SearchHotelDto })
   @ApiOkResponse({ description: 'Search response (pass-through)' })
-  search(@Body() body: Record<string, unknown>) {
-    return this.suppliers.active().searchHotels(body);
+  async search(@Body() body: Record<string, unknown>) {
+    const resolved = await this.resolveDestinationCodes(body);
+    return this.suppliers.active().searchHotels(resolved);
   }
 
   @Post('recheck')
@@ -44,8 +57,9 @@ export class BedbankController {
   })
   @ApiBody({ type: RecheckHotelDto })
   @ApiOkResponse({ description: 'Recheck response (pass-through)' })
-  recheck(@Body() body: Record<string, unknown>) {
-    return this.suppliers.active().recheckHotel(body);
+  async recheck(@Body() body: Record<string, unknown>) {
+    const resolved = await this.resolveDestinationCodes(body);
+    return this.suppliers.active().recheckHotel(resolved);
   }
 
   @Post('book')
@@ -132,5 +146,42 @@ export class BedbankController {
   @ApiOkResponse({ description: 'Meal plans (pass-through)' })
   mealPlans() {
     return this.suppliers.active().getMealPlans();
+  }
+
+  /**
+   * If destinationId is present, resolve Country/City for the active supplier.
+   * Uses ModuleRef so DestinationsService is optional (SKIP_DB / bedbank-only).
+   */
+  private async resolveDestinationCodes(
+    body: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const destinationId = body?.destinationId;
+    if (destinationId == null || destinationId === '') {
+      return body;
+    }
+    if (typeof destinationId !== 'string') {
+      throw new BadRequestException('destinationId must be a string');
+    }
+
+    let destinations: DestinationsService;
+    try {
+      destinations = this.moduleRef.get(DestinationsService, { strict: false });
+    } catch {
+      throw new BadRequestException(
+        'destinationId resolution requires database (DestinationsModule)',
+      );
+    }
+
+    const codes = await destinations.resolveCodes(
+      destinationId,
+      this.suppliers.activeSource(),
+    );
+
+    const { destinationId: _omit, ...rest } = body;
+    return {
+      ...rest,
+      Country: codes.countryCode,
+      City: codes.cityCode,
+    };
   }
 }

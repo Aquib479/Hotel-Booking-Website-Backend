@@ -275,8 +275,6 @@ components:
       type: object
       required:
         - Nationality
-        - Country
-        - City
         - Hotels
         - CheckIn
         - CheckOut
@@ -286,15 +284,21 @@ components:
         - AvailFlag
         - DetailLevel
       properties:
+        destinationId:
+          type: string
+          format: uuid
+          description: Local destination id from GET /destinations/autocomplete. When set, server resolves Country/City for the active supplier.
         Nationality:
           type: string
           example: ID
         Country:
           type: string
           example: ID
+          description: Required when destinationId is omitted
         City:
           type: string
           example: ID-CGK
+          description: Required when destinationId is omitted
         Hotels:
           type: object
           properties:
