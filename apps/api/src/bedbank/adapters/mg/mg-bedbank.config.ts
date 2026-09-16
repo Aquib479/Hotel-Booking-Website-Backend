@@ -11,7 +11,7 @@ export class MgBedbankConfig {
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>(
       'MG_BEDBANK_BASE_URL',
-      'http://uat-jarvis1-xmlsell.mgbedbank.com',
+      'https://uat-jarvis1-xmlsell.mgbedbank.com',
     );
     this.agencyCode = config.get<string>('MG_AGENCY_CODE', '');
     this.username = config.get<string>('MG_USERNAME', '');
