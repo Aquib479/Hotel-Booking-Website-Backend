@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Header,
+  ParseIntPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DestinationsService } from './destinations.service';
 import { DestinationsSyncService } from './destinations-sync.service';
@@ -25,6 +33,18 @@ export class DestinationsController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
     return this.destinations.autocomplete(q, limit);
+  }
+
+  @Get('destinations/all')
+  @Header('Cache-Control', 'public, max-age=86400')
+  @ApiOperation({
+    summary: 'List all active destinations',
+    description:
+      'Full destination master for client-side autocomplete. Response may be cached for 24 hours.',
+  })
+  @ApiOkResponse({ description: 'All active destinations' })
+  listAll() {
+    return this.destinations.listAllActive();
   }
 
   @Get('nationalities')

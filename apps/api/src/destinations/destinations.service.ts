@@ -16,6 +16,12 @@ export type DestinationAutocompleteItem = {
   label: string;
 };
 
+export type DestinationListItem = {
+  id: string;
+  cityName: string;
+  countryName: string;
+};
+
 export type ResolvedDestinationCodes = {
   destinationId: string;
   source: string;
@@ -65,6 +71,20 @@ export class DestinationsService {
       cityName: d.cityName,
       countryName: d.countryName,
       label: `${d.cityName}, ${d.countryName}`,
+    }));
+  }
+
+  async listAllActive(): Promise<DestinationListItem[]> {
+    const rows = await this.destinations.find({
+      where: { isActive: true },
+      select: { id: true, cityName: true, countryName: true },
+      order: { cityName: 'ASC', countryName: 'ASC' },
+    });
+
+    return rows.map((d) => ({
+      id: d.id,
+      cityName: d.cityName,
+      countryName: d.countryName,
     }));
   }
 
