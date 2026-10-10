@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 *.log
+ssm-params.json
+scripts/tmp-*.cjs
